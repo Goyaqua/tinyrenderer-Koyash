@@ -1,4 +1,4 @@
-"I’m preparing for an upcoming computer graphics course, and I discovered the Tiny Renderer project by Dmitry V. Sokolov. To get a head start, I decided to dive into the fundamentals by working through it beforehand. 
+"I’m preparing for an upcoming computer graphics course, and I discovered the [Tiny Renderer](https://github.com/ssloy/tinyrenderer) project by Dmitry V. Sokolov. To get a head start, I decided to dive into the fundamentals by working through it beforehand. 
 
 Here are a few examples of what I’ve accomplished so far:"
 
