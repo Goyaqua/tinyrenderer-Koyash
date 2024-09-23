@@ -1,33 +1,34 @@
 #include "tgaimage.h"
 #include <vector>
 #include <cmath>
-#include "model.h"
+#include "geometry.h"
 
 
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red   = TGAColor(255, 0,   0,   255);
-Model *model = NULL;
-const int width  = 2500;
-const int height = 2500;
+const TGAColor green = TGAColor(0,   255, 0,   255);
+
+const int width  = 200;
+const int height = 200;
 
 //Bresenham's Line Drawing Algorithm
-void line( int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color){
+void line( Vec2i p0, Vec2i p1, TGAImage &image, TGAColor color){
 
     bool steep = false;
-    if (std::abs(x0-x1)<std::abs(y0-y1)){
-        std::swap(x0,y0);
-        std::swap(x1,y1);
+    if (std::abs(p0.x - p1.x) < std::abs(p0.y - p1.y)){
+        std::swap(p0.x,p0.y);
+        std::swap(p1.x,p1.y);
         steep = true;
     }
 
-    if (x0>x1){
-        std::swap(x0,x1);
-        std::swap(y0,y1);
+    if (p0.x>p1.x){
+        std::swap(p0.x,p1.x);
+        std::swap(p0.y,p1.y);
     }
 
-    for(int x = x0; x <= x1; x++){
-        float t = (x-x0)/(float)(x1-x0);
-        int y = y0 * (1.0 - t) + y1 * t;
+    for(int x = p0.x; x <= p1.x; x++){
+        float t = (x - p0.x)/(float)(p1.x - p0.x);
+        int y = p0.y * (1.0 - t) + p1.y * t;
         if (steep){
             image.set(y,x,color);
         } else {
@@ -36,39 +37,24 @@ void line( int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color){
     }
 }
 
+void triangle( Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color){
+    line(t0,t1,image,color);
+    line(t1,t2,image,color);
+    line(t0,t2,image,color);
+}
+
+
 int main(int argc, char** argv) {
 
-    if (2==argc) {
-        model = new Model(argv[1]);
-    } else {
-        model = new Model("obj/SephirothR.obj");
-    }
-    float translateY = -1300;
     TGAImage image(width, height, TGAImage::RGB);
-    for (int i=0; i<model->nfaces(); i++) {
-        std::vector<int> face = model->face(i);
 
-        for (int j=0; j<3; j++) {
-            Vec3f v0 = model->vert(face[j]);
-            Vec3f v1 = model->vert(face[(j+1)%3]);
+    Vec2i t0[3] = {Vec2i(10, 70),   Vec2i(50, 160),  Vec2i(70, 80)};
+    Vec2i t1[3] = {Vec2i(180, 50),  Vec2i(150, 1),   Vec2i(70, 180)};
+    Vec2i t2[3] = {Vec2i(180, 150), Vec2i(120, 160), Vec2i(130, 180)};
 
-            float tempX0 = v0.x;   // Store original x
-            v0.x = v0.z;           // New x is original z
-            v0.z = -tempX0;        // New z is -original x
-
-            float tempX1 = v1.x;   // Store original x
-            v1.x = v1.z;           // New x is original z
-            v1.z = -tempX1;
-
-            float scaleFactor = 1.;  // Try values <1 to zoom out, >1 to zoom in
-            int x0 = (v0.x * scaleFactor + 1.) * width / 2.;
-            int y0 = (v0.y * scaleFactor + 1.) * height / 2. + translateY;
-            int x1 = (v1.x * scaleFactor + 1.) * width / 2.;
-            int y1 = (v1.y * scaleFactor + 1.) * height / 2. + translateY;
-
-            line(x0, y0, x1, y1, image, white);
-        }
-    }
+    triangle(t0[0], t0[1], t0[2], image, red);
+    triangle(t1[0], t1[1], t1[2], image, white);
+    triangle(t2[0], t2[1], t2[2], image, green);
 
 	image.flip_vertically(); //to have the origin at the left bottom corner of the image
 	image.write_tga_file("output.tga");
