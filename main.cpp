@@ -2,7 +2,6 @@
 #include <vector>
 #include <cmath>
 #include "geometry.h"
-#include <algorithm>
 
 
 const TGAColor white = TGAColor(255, 255, 255, 255);
@@ -45,35 +44,44 @@ void triangle( Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color){
     line(t2,t0,image,color);
 }
 
-// Fill the triangle using scanline algorithm
 void fill(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color) {
-    // Sort the points based on the x-coordinate
+    // Sort the vertices by their x-coordinates
     if (t0.x > t1.x) std::swap(t0, t1);
     if (t0.x > t2.x) std::swap(t0, t2);
     if (t1.x > t2.x) std::swap(t1, t2);
 
-    // Now t0 is the leftmost, t1 is the middle, and t2 is the rightmost point.
+    // Fill the triangle
+    for (int x = t0.x; x <= t2.x; x++) {
+        // Calculate the y-coordinates at this x for both edges
+        int y0, y1;
 
-    // Fill the left part (from t0 to t1)
-    for (int x = t0.x; x <= t1.x; x++) {
-        int y0 = t0.y + (t1.y - t0.y) * (x - t0.x) / (t1.x - t0.x); // Interpolated y at x
-        int y1 = t0.y + (t2.y - t0.y) * (x - t0.x) / (t2.x - t0.x); // Interpolated y at x
-        if (y0 > y1) std::swap(y0, y1); // Ensure y0 is the smaller y
-        for (int y = y0; y <= y1; y++) {
-            image.set(x, y, color); // Set pixel color
+        // Check if x is in the range for t0-t1 edge
+        if (x < t1.x) {
+            //left side interpolation
+            float t1_factor = (x - t0.x) / (float)(t1.x - t0.x);
+            y0 = t0.y * (1.0f - t1_factor) + t1.y * t1_factor;  // y-coordinate on t0-t1 edge
+        } else {
+            //right side interpolation
+            float t1_factor = (x - t1.x) / (float)(t2.x - t1.x);
+            y0 = t1.y * (1.0f - t1_factor) + t2.y * t1_factor;  // y-coordinate on t1-t2 edge
         }
-    }
 
-    // Fill the right part (from t1 to t2)
-    for (int x = t1.x; x <= t2.x; x++) {
-        int y0 = t1.y + (t2.y - t1.y) * (x - t1.x) / (t2.x - t1.x); // Interpolated y at x
-        int y1 = t1.y + (t0.y - t1.y) * (x - t1.x) / (t0.x - t1.x); // Interpolated y at x
-        if (y0 > y1) std::swap(y0, y1); // Ensure y0 is the smaller y
+        // Always calculate the y-coordinate on t0-t2 edge
+        float t2_factor = (x - t0.x) / (float)(t2.x - t0.x);
+        y1 = t0.y * (1.0f - t2_factor) + t2.y * t2_factor;  // y-coordinate on t0-t2 edge
+
+        // Ensure y0 is the lower and y1 is the upper
+        if (y0 > y1) std::swap(y0, y1);
+
+        // Fill vertical line between y0 and y1
         for (int y = y0; y <= y1; y++) {
-            image.set(x, y, color); // Set pixel color
+            image.set(x, y, color); // Fill the pixel
         }
     }
 }
+
+
+
 
 
 
