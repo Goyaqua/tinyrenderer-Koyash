@@ -1,13 +1,14 @@
 #include <vector>
 #include <cmath>
+#include <limits>
 #include "tgaimage.h"
-#include "model.h"
 #include "geometry.h"
 
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red   = TGAColor(255, 0,   0,   255);
 const TGAColor green = TGAColor(0,   255, 0,   255);
-Model *model = NULL;
+const TGAColor blue = TGAColor(0,0,255,255);
+
 const int width  = 800;
 const int height = 800;
 
@@ -29,6 +30,20 @@ void line(Vec2i p0, Vec2i p1, TGAImage &image, TGAColor color) {
             image.set(y, x, color);
         } else {
             image.set(x, y, color);
+        }
+    }
+}
+void rasterize(Vec2i p0, Vec2i p1, TGAImage &image, TGAColor color, int ybuffer[]){
+    if (p0.x > p1.x){
+        std::swap(p0, p1);
+    }
+
+    for (int x = p0.x; x <= p1.x; x++){
+        float t = (x - p0.x) / (float)(p1.x - p0.x);
+        int y = (p0.y * (1.0 - t)) + (p1.y * t) + 0.5;
+        if(ybuffer[x] < y){
+            ybuffer[x] = y;
+            image.set(x, 0, color);
         }
     }
 }
@@ -57,50 +72,26 @@ void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color) {
 }
 
 int main(int argc, char** argv) {
-    if (2 == argc) {
-        model = new Model(argv[1]);
-    } else {
-        model = new Model("obj/SephirothR.obj");
+
+    TGAImage scene(width, height, TGAImage::RGB);
+
+    line(Vec2i(20, 34),   Vec2i(744, 400), scene, red);
+    line(Vec2i(120, 434), Vec2i(444, 400), scene, green);
+    line(Vec2i(330, 463), Vec2i(594, 200), scene, blue);
+
+    line(Vec2i(10, 10), Vec2i(790, 10), scene, white);
+
+    TGAImage render(width, 16, TGAImage::RGB);
+    int ybuffer[width];
+    for (int i=0; i<width; i++) {
+        ybuffer[i] = std::numeric_limits<int>::min();
     }
+    rasterize(Vec2i(20, 34),   Vec2i(744, 400), render, red,   ybuffer);
+    rasterize(Vec2i(120, 434), Vec2i(444, 400), render, green, ybuffer);
+    rasterize(Vec2i(330, 463), Vec2i(594, 200), render, blue,  ybuffer);
 
-    TGAImage image(width, height, TGAImage::RGB);
-
-    Vec3f light_dir(0, 0, -1); // Light direction
-
-    for (int i = 0; i < model->nfaces(); i++) {
-        std::vector<int> face = model->face(i);
-        Vec2i screen_coords[3];
-        Vec3f world_coords[3];
-
-        for (int j = 0; j < 3; j++) {
-            Vec3f v = model->vert(face[j]);
-
-            // Translation: Move down by 0.5 units (adjust as needed)
-            v.y -= 1;
-
-            // Rotation: Rotate 90 degrees around Y-axis
-            float rotatedX = v.z;    // New x = z
-            float rotatedY = v.y;    // y remains unchanged
-            float rotatedZ = -v.x;   // New z = -x
-
-            // Transform to screen coordinates
-            screen_coords[j] = Vec2i((rotatedX + 1.) * width / 2., (rotatedY + 1.) * height / 2.);
-            world_coords[j]  = Vec3f(rotatedX, rotatedY, rotatedZ); // Store rotated world coordinates for lighting
-        }
-
-        Vec3f n = (world_coords[2] - world_coords[0]) ^ (world_coords[1] - world_coords[0]);
-        n.normalize();
-        float intensity = n * light_dir;
-
-        // Draw the triangle if it is facing the light source
-        if (intensity > 0) {
-            triangle(screen_coords[0], screen_coords[1], screen_coords[2], image, TGAColor(intensity * 255, intensity * 255, intensity * 255, 255));
-        }
-    }
-
-    image.flip_vertically(); // Origin at the bottom-left corner
-    image.write_tga_file("output.tga");
-    delete model;
+    render.flip_vertically(); // Origin at the bottom-left corner
+    render.write_tga_file("output.tga");
     return 0;
 }
 
